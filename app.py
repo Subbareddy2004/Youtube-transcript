@@ -65,11 +65,13 @@ def create_pdf(summary_text):
     pdf.set_font("Arial", size=12)
     pdf.multi_cell(0, 10, summary_text)
 
-    # Save the PDF to a BytesIO object
+    # Save the PDF to a BytesIO object and return its content
     pdf_output = io.BytesIO()
-    pdf.output(pdf_output)
+    pdf_output.write(pdf.output(dest='S'))  # Directly write the bytearray to BytesIO
     pdf_output.seek(0)
     return pdf_output.getvalue()
+
+
 
 
 # Streamlit UI
