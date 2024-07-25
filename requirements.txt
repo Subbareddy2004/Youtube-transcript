@@ -1,6 +1,5 @@
 streamlit
 python-dotenv
-google-generative-ai
 youtube-transcript-api
 fpdf
 deep-translator
