@@ -4,7 +4,7 @@ import os
 import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 from fpdf import FPDF
-import io  # Import the io module
+import io
 
 # Load environment variables
 load_dotenv()
@@ -17,7 +17,6 @@ prompt = """You are a YouTube video summarizer. You will be taking the transcrip
 and summarizing the entire video, providing the important summary in points
 within 250 words. Please provide the summary of the text given here: """
 
-
 def extract_video_id(youtube_url):
     """Extracts video ID from YouTube URL."""
     if "youtu.be/" in youtube_url:
@@ -26,7 +25,6 @@ def extract_video_id(youtube_url):
         return youtube_url.split("v=")[1].split("&")[0]
     else:
         raise ValueError("Invalid YouTube URL")
-
 
 def extract_transcript_details(youtube_video_url):
     """Fetches transcript from YouTube video using video ID."""
@@ -46,7 +44,6 @@ def extract_transcript_details(youtube_video_url):
         st.error(f"Error fetching transcript: {str(e)}")
         return None
 
-
 def generate_gemini_content(transcript_text, prompt):
     """Generates content using Google Gemini Pro."""
     try:
@@ -57,7 +54,6 @@ def generate_gemini_content(transcript_text, prompt):
         st.error(f"Error generating summary: {e}")
         return None
 
-
 def create_pdf(summary_text):
     """Creates a PDF file from the summary text."""
     pdf = FPDF()
@@ -65,14 +61,9 @@ def create_pdf(summary_text):
     pdf.set_font("Arial", size=12)
     pdf.multi_cell(0, 10, summary_text)
 
-    # Save the PDF to a BytesIO object and return its content
-    pdf_output = io.BytesIO()
-    pdf_output.write(pdf.output(dest='S'))  # Directly write the bytearray to BytesIO
-    pdf_output.seek(0)
-    return pdf_output.getvalue()
-
-
-
+    # Generate PDF data as bytes
+    pdf_output = pdf.output(dest='S')  # Get the PDF as bytearray
+    return bytes(pdf_output)  # Convert bytearray to bytes
 
 # Streamlit UI
 st.title("YouTube Transcript to Detailed Notes Converter")
