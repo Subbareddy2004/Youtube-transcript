@@ -1,5 +1,14 @@
+<<<<<<< HEAD
 streamlit==1.28.0
 python-dotenv==1.0.0
 google-generativeai==0.3.1
 youtube_transcript_api==0.6.1
 fpdf==1.7.2
+=======
+io
+streamlit
+python-dotenv
+google-generativeai
+youtube_transcript_api
+fpdf
+>>>>>>> origin/main
