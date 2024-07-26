@@ -1,10 +1,10 @@
+import io
 import streamlit as st
 from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 from fpdf import FPDF
-import io
 
 # Load environment variables
 load_dotenv()
@@ -62,8 +62,10 @@ def create_pdf(summary_text):
     pdf.multi_cell(0, 10, summary_text)
 
     # Generate PDF data as bytes
-    pdf_output = pdf.output(dest='S')  # Get the PDF as bytearray
-    return bytes(pdf_output)  # Convert bytearray to bytes
+    pdf_output = io.BytesIO()
+    pdf.output(pdf_output)
+    pdf_output.seek(0)
+    return pdf_output.getvalue()
 
 # Streamlit UI
 st.title("YouTube Transcript to Detailed Notes Converter")
