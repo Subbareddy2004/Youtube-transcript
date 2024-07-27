@@ -27,14 +27,14 @@ class PDF(FPDF):
 
     def header(self):
         if self.first_page:
-            self.set_font('DejaVu', 'B', 15)
+            self.set_font('Arial', 'B', 15)
             self.cell(0, 10, 'YouTube Video Content Summary', new_x='LMARGIN', new_y='TOP')
             self.ln(15)  # Add space after header
             self.first_page = False  # Set flag to False after first page
 
     def footer(self):
         self.set_y(-15)
-        self.set_font('DejaVu', '', 8)
+        self.set_font('Arial', '', 8)
         self.cell(0, 10, f'Page {self.page_no()}', new_x='RIGHT', new_y='TOP', align='C')
 
 
@@ -76,16 +76,13 @@ def generate_gemini_content(transcript_text, prompt):
 
 def create_pdf(content, video_title):
     pdf = PDF()
-    pdf.add_font('DejaVu', '', 'DejaVuSans.ttf')
-    pdf.add_font('DejaVu', 'B', 'DejaVuSans-Bold.ttf')
-    pdf.add_font('DejaVu', 'I', 'DejaVuSans-Oblique.ttf')
     
     # Add the first page with header
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
     # Video Title
-    pdf.set_font("DejaVu", "B", 14)
+    pdf.set_font("Arial", "B", 14)
     pdf.cell(0, 10, f"Video Title: {video_title}", new_x='LMARGIN', new_y='TOP')
     pdf.ln(10)  # Increased space after video title
 
@@ -99,7 +96,7 @@ def create_pdf(content, video_title):
             body = lines[1] if len(lines) > 1 else ""
 
             # Add section title with padding
-            pdf.set_font("DejaVu", "B", 12)
+            pdf.set_font("Arial", "B", 12)
             pdf.set_fill_color(200, 220, 255)
 
             # Custom spacing for specific headings
@@ -112,16 +109,16 @@ def create_pdf(content, video_title):
             pdf.ln(15)  # Increased padding after heading to separate from content
 
             # Add section content
-            pdf.set_font("DejaVu", "", 11)
+            pdf.set_font("Arial", "", 11)
             for paragraph in body.split("\n"):
                 if paragraph.startswith("Question:"):
-                    pdf.set_font("DejaVu", "B", 11)
+                    pdf.set_font("Arial", "B", 11)
                     pdf.multi_cell(0, 5, paragraph)
-                    pdf.set_font("DejaVu", "", 11)
+                    pdf.set_font("Arial", "", 11)
                 elif paragraph.startswith("Answer:"):
-                    pdf.set_font("DejaVu", "I", 11)
+                    pdf.set_font("Arial", "I", 11)
                     pdf.multi_cell(0, 5, paragraph)
-                    pdf.set_font("DejaVu", "", 11)
+                    pdf.set_font("Arial", "", 11)
                 else:
                     pdf.multi_cell(0, 5, paragraph)
                 pdf.ln(5)  # Increased line spacing within content
