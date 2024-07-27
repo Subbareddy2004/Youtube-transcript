@@ -22,13 +22,13 @@ class PDF(FPDF):
     def header(self):
         if self.page_no() == 1:
             self.set_font('DejaVu', 'B', 15)
-            self.cell(0, 10, 'YouTube Video Content Summary', new_x='LMARGIN', new_y='TOP')
+            self.cell(0, 10, 'YouTube Video Content Summary', ln=True)
             self.ln(15)
 
     def footer(self):
         self.set_y(-15)
         self.set_font('DejaVu', '', 8)
-        self.cell(0, 10, f'Page {self.page_no()}', new_x='RIGHT', new_y='TOP', align='C')
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
 def extract_video_id(youtube_url):
     """Extracts video ID from YouTube URL."""
