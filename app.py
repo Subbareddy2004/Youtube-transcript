@@ -65,10 +65,20 @@ def generate_gemini_content(transcript_text, prompt):
 
 def create_pdf(content, video_title):
     pdf = PDF()
-    pdf.add_font('DejaVu', '', 'DejaVuSans.ttf')
-    pdf.add_font('DejaVu', 'B', 'DejaVuSans-Bold.ttf')
-    pdf.add_font('DejaVu', 'I', 'DejaVuSans-Oblique.ttf')
     
+    # Check if font files exist
+    if not os.path.isfile('DejaVuSans.ttf') or not os.path.isfile('DejaVuSans-Bold.ttf') or not os.path.isfile('DejaVuSans-Oblique.ttf'):
+        st.error("Font files not found. Please make sure the DejaVu font files are present in the same directory as this script.")
+        return None
+    
+    try:
+        pdf.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
+        pdf.add_font('DejaVu', 'B', 'DejaVuSans-Bold.ttf', uni=True)
+        pdf.add_font('DejaVu', 'I', 'DejaVuSans-Oblique.ttf', uni=True)
+    except Exception as e:
+        st.error(f"Error loading fonts: {e}")
+        return None
+
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
