@@ -65,7 +65,7 @@ def generate_gemini_content(transcript_text, prompt):
 
 def create_pdf(content, video_title):
     pdf = PDF()
-    
+
     # Check if font files exist
     if not os.path.isfile('DejaVuSans.ttf') or not os.path.isfile('DejaVuSans-Bold.ttf') or not os.path.isfile('DejaVuSans-Oblique.ttf'):
         st.error("Font files not found. Please make sure the DejaVu font files are present in the same directory as this script.")
@@ -98,7 +98,7 @@ def create_pdf(content, video_title):
             # Section Title
             pdf.set_font("DejaVu", "B", 12)
             pdf.set_fill_color(200, 220, 255)
-            pdf.cell(0, 10, title, 0, 1, 'L', True)
+            pdf.cell(0, 10, title, ln=True, fill=True)
             pdf.ln(5)
 
             # Section Content
@@ -113,7 +113,7 @@ def create_pdf(content, video_title):
                         pdf.set_font("Courier", "", 10)
                         pdf.set_fill_color(240, 240, 240)
                         for code_line in code_buffer:
-                            pdf.cell(0, 5, code_line, 0, 1, 'L', True)
+                            pdf.cell(0, 5, code_line, ln=True, fill=True)
                         code_buffer = []
                         pdf.ln(5)
                         pdf.set_font("DejaVu", "", 11)
