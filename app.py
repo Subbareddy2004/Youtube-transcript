@@ -3,9 +3,13 @@ from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
-from fpdf import FPDF
 import requests
 import re
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
 
 # Load environment variables
 load_dotenv()
@@ -18,23 +22,6 @@ summary_prompt = """You are a YouTube video summarizer. Provide a concise summar
 key_points_prompt = """Extract and list the key points from the following video transcript: """
 qa_prompt = """Based on the following video transcript, generate 5 relevant questions and their answers. Format each as 'Question: [question]' followed by 'Answer: [answer]' without any asterisks or additional formatting: """
 code_explanation_prompt = """Extract the code snippets from the following video transcript and provide a detailed explanation for each code snippet: """
-
-class PDF(FPDF):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.first_page = True  # Flag to track if it's the first page
-
-    def header(self):
-        if self.first_page:
-            self.set_font('DejaVu', 'B', 15)
-            self.cell(0, 10, 'YouTube Video Content Summary', new_x='LMARGIN', new_y='TOP')
-            self.ln(15)  # Add space after header
-            self.first_page = False  # Set flag to False after first page
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('DejaVu', '', 8)
-        self.cell(0, 10, f'Page {self.page_no()}', new_x='RIGHT', new_y='TOP', align='C')
 
 def extract_video_id(youtube_url):
     """Extracts video ID from YouTube URL."""
@@ -70,74 +57,46 @@ def generate_gemini_content(transcript_text, prompt):
         return None
 
 def create_pdf(content, video_title):
-    pdf = PDF()
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
     
-    # Font loading with error handling
-    font_files = [
-        ('DejaVu', '', 'DejaVuSans.ttf'),
-        ('DejaVu', 'B', 'DejaVuSans-Bold.ttf'),
-        ('DejaVu', 'I', 'DejaVuSans-Oblique.ttf')
-    ]
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='Justify', alignment=4))  # 4 means justified
     
-    for family, style, filename in font_files:
-        try:
-            font_path = os.path.join(os.path.dirname(__file__), filename)
-            pdf.add_font(family, style, font_path, uni=True)
-        except Exception as e:
-            st.error(f"Error loading font {filename}: {str(e)}")
-            return None
+    flowables = []
     
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-
-    pdf.set_font("DejaVu", "B", 14)
-    pdf.cell(0, 10, f"Video Title: {video_title}", new_x='LMARGIN', new_y='TOP')
-    pdf.ln(10)
-
+    # Add title
+    flowables.append(Paragraph(f"Video Title: {video_title}", styles['Heading1']))
+    flowables.append(Spacer(1, 0.25*inch))
+    
+    # Process content
     sections = content.split("## ")
+    for section in sections[1:]:  # Skip the first empty split
+        lines = section.split("\n", 1)
+        title = lines[0]
+        body = lines[1] if len(lines) > 1 else ""
+        
+        flowables.append(Paragraph(title, styles['Heading2']))
+        flowables.append(Spacer(1, 0.1*inch))
+        
+        for paragraph in body.split("\n"):
+            if paragraph.startswith("Question:"):
+                flowables.append(Paragraph(paragraph, styles['Heading3']))
+            elif paragraph.startswith("Answer:"):
+                flowables.append(Paragraph(paragraph, styles['BodyText']))
+            elif paragraph.strip().startswith("```"):
+                code = paragraph.strip("```").strip()
+                flowables.append(Paragraph(code, styles['Code']))
+            else:
+                flowables.append(Paragraph(paragraph, styles['Justify']))
+            flowables.append(Spacer(1, 0.1*inch))
+        
+        flowables.append(Spacer(1, 0.2*inch))
+    
+    doc.build(flowables)
+    buffer.seek(0)
+    return buffer
 
-    for section in sections:
-        if section.strip() != "":
-            lines = section.split("\n", 1)
-            title = lines[0]
-            body = lines[1] if len(lines) > 1 else ""
-
-            pdf.set_font("DejaVu", "B", 12)
-            pdf.set_fill_color(200, 220, 255)
-
-            if title == "Summary:":
-                pdf.ln(20)
-            elif title == "Questions and Answers:":
-                pdf.ln(20)
-
-            pdf.cell(0, 10, title, new_x='LMARGIN', new_y='TOP', fill=True)
-            pdf.ln(15)
-
-            pdf.set_font("DejaVu", "", 11)
-            for paragraph in body.split("\n"):
-                if paragraph.startswith("Question:"):
-                    pdf.set_font("DejaVu", "B", 11)
-                    pdf.multi_cell(0, 5, paragraph)
-                    pdf.set_font("DejaVu", "", 11)
-                elif paragraph.startswith("Answer:"):
-                    pdf.set_font("DejaVu", "I", 11)
-                    pdf.multi_cell(0, 5, paragraph)
-                    pdf.set_font("DejaVu", "", 11)
-                elif paragraph.startswith("```"):
-                    # If paragraph is a code block, extract code and add to PDF
-                    pdf.set_font("DejaVu", "", 11)
-                    pdf.set_fill_color(230, 230, 230)
-                    pdf.multi_cell(0, 5, paragraph.strip("```"), fill=True)
-                else:
-                    pdf.multi_cell(0, 5, paragraph)
-                pdf.ln(5)
-
-            pdf.ln(15)
-
-            if pdf.get_y() > 250:
-                pdf.add_page()
-
-    return bytes(pdf.output())
 def get_video_title(video_id):
     try:
         api_key = os.getenv("YOUTUBE_DATA_API_KEY")
@@ -188,40 +147,37 @@ if st.button("Generate Content"):
         with st.spinner('Generating content...'):
             summary = generate_gemini_content(transcript_text, summary_prompt)
             if summary:
-                content += "## Summary:\n" + summary + "\n\n"
+                content += "## Summary\n" + summary + "\n\n"
 
             if include_key_points:
                 key_points = generate_gemini_content(transcript_text, key_points_prompt)
                 if key_points:
-                    content += "## Key Points:\n" + key_points + "\n\n"
+                    content += "## Key Points\n" + key_points + "\n\n"
 
             if include_qa:
                 qa = generate_gemini_content(transcript_text, qa_prompt)
                 if qa:
-                    content += "## Questions and Answers:\n" + qa + "\n\n"
+                    content += "## Questions and Answers\n" + qa + "\n\n"
             
             if include_code_explanation:
                 code_explanation = generate_gemini_content(transcript_text, code_explanation_prompt)
                 if code_explanation:
-                    content += "## Code Explanation:\n" + code_explanation + "\n\n"
+                    content += "## Code Explanation\n" + code_explanation + "\n\n"
 
             if content.strip():
                 st.markdown(content)
 
                 try:
-                    pdf_data = create_pdf(content, video_title)
-                    if pdf_data is None:
-                        st.error("Failed to create PDF due to font loading error.")
-                    elif len(pdf_data) > 200 * 1024 * 1024:  # 200 MB limit
-                        st.error("PDF file is too large to download.")
-                    else:
-                        st.download_button(
-                            label="Download Content as PDF",
-                            data=pdf_data,
-                            file_name=f"{sanitize_filename(video_title)}_summary.pdf",
-                            mime="application/pdf"
-                        )
+                    pdf_buffer = create_pdf(content, video_title)
+                    st.download_button(
+                        label="Download Content as PDF",
+                        data=pdf_buffer,
+                        file_name=f"{sanitize_filename(video_title)}_summary.pdf",
+                        mime="application/pdf"
+                    )
                 except Exception as e:
                     st.error(f"Error creating PDF: {str(e)}")
             else:
                 st.error("No content generated to create PDF.")
+    else:
+        st.error("Unable to fetch transcript. This video might not have any available transcripts.")
