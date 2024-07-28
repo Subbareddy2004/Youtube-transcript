@@ -5,6 +5,7 @@ import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 from fpdf import FPDF
 import requests
+import re
 
 # Load environment variables
 load_dotenv()
@@ -19,8 +20,8 @@ qa_prompt = """Based on the following video transcript, generate 5 relevant ques
 code_explanation_prompt = """Extract the code snippets from the following video transcript and provide a detailed explanation for each code snippet: """
 
 class PDF(FPDF):
-    def _init_(self, *args, **kwargs):
-        super()._init_(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.first_page = True  # Flag to track if it's the first page
 
     def header(self):
@@ -70,9 +71,9 @@ def generate_gemini_content(transcript_text, prompt):
 
 def create_pdf(content, video_title):
     pdf = PDF()
-    pdf.add_font('DejaVu', '', 'DejaVuSans.ttf')
-    pdf.add_font('DejaVu', 'B', 'DejaVuSans-Bold.ttf')
-    pdf.add_font('DejaVu', 'I', 'DejaVuSans-Oblique.ttf')
+    pdf.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
+    pdf.add_font('DejaVu', 'B', 'DejaVuSans-Bold.ttf', uni=True)
+    pdf.add_font('DejaVu', 'I', 'DejaVuSans-Oblique.ttf', uni=True)
     
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -144,6 +145,9 @@ def get_video_title(video_id):
         st.error(f"Error fetching video title: {str(e)}")
         return 'Video Title Not Available'
 
+def sanitize_filename(filename):
+    return re.sub(r'[\\/*?:"<>|]', "", filename)
+
 # Streamlit UI
 st.title("YouTube Video Content Generator")
 youtube_link = st.text_input("Enter YouTube Video Link:")
@@ -190,17 +194,23 @@ if st.button("Generate Content"):
                 if code_explanation:
                     content += "## Code Explanation:\n" + code_explanation + "\n\n"
 
-            if content:
+            if content.strip():
                 st.markdown(content)
 
-                pdf_data = create_pdf(content, video_title)
-                st.download_button(
-                    label="Download Content as PDF",
-                    data=pdf_data,
-                    file_name=f"{video_title}_summary.pdf",
-                    mime="application/pdf"
-                )
+                try:
+                    pdf_data = create_pdf(content, video_title)
+                    if len(pdf_data) > 200 * 1024 * 1024:  # 200 MB limit
+                        st.error("PDF file is too large to download.")
+                    else:
+                        st.download_button(
+                            label="Download Content as PDF",
+                            data=pdf_data,
+                            file_name=f"{sanitize_filename(video_title)}_summary.pdf",
+                            mime="application/pdf"
+                        )
+                except Exception as e:
+                    st.error(f"Error creating PDF: {str(e)}")
             else:
-                st.error("Failed to generate content.")
+                st.error("No content generated to create PDF.")
     else:
         st.error("Unable to fetch transcript. This video might not have any available transcripts.")
