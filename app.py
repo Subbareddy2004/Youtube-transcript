@@ -71,9 +71,21 @@ def generate_gemini_content(transcript_text, prompt):
 
 def create_pdf(content, video_title):
     pdf = PDF()
-    pdf.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
-    pdf.add_font('DejaVu', 'B', 'DejaVuSans-Bold.ttf', uni=True)
-    pdf.add_font('DejaVu', 'I', 'DejaVuSans-Oblique.ttf', uni=True)
+    
+    # Font loading with error handling
+    font_files = [
+        ('DejaVu', '', 'DejaVuSans.ttf'),
+        ('DejaVu', 'B', 'DejaVuSans-Bold.ttf'),
+        ('DejaVu', 'I', 'DejaVuSans-Oblique.ttf')
+    ]
+    
+    for family, style, filename in font_files:
+        try:
+            font_path = os.path.join(os.path.dirname(__file__), filename)
+            pdf.add_font(family, style, font_path, uni=True)
+        except Exception as e:
+            st.error(f"Error loading font {filename}: {str(e)}")
+            return None
     
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -111,11 +123,11 @@ def create_pdf(content, video_title):
                     pdf.set_font("DejaVu", "I", 11)
                     pdf.multi_cell(0, 5, paragraph)
                     pdf.set_font("DejaVu", "", 11)
-                elif paragraph.startswith(""):
+                elif paragraph.startswith("```"):
                     # If paragraph is a code block, extract code and add to PDF
                     pdf.set_font("DejaVu", "", 11)
                     pdf.set_fill_color(230, 230, 230)
-                    pdf.multi_cell(0, 5, paragraph.strip(""), fill=True)
+                    pdf.multi_cell(0, 5, paragraph.strip("```"), fill=True)
                 else:
                     pdf.multi_cell(0, 5, paragraph)
                 pdf.ln(5)
@@ -126,7 +138,6 @@ def create_pdf(content, video_title):
                 pdf.add_page()
 
     return bytes(pdf.output())
-
 def get_video_title(video_id):
     try:
         api_key = os.getenv("YOUTUBE_DATA_API_KEY")
@@ -199,7 +210,9 @@ if st.button("Generate Content"):
 
                 try:
                     pdf_data = create_pdf(content, video_title)
-                    if len(pdf_data) > 200 * 1024 * 1024:  # 200 MB limit
+                    if pdf_data is None:
+                        st.error("Failed to create PDF due to font loading error.")
+                    elif len(pdf_data) > 200 * 1024 * 1024:  # 200 MB limit
                         st.error("PDF file is too large to download.")
                     else:
                         st.download_button(
@@ -212,5 +225,3 @@ if st.button("Generate Content"):
                     st.error(f"Error creating PDF: {str(e)}")
             else:
                 st.error("No content generated to create PDF.")
-    else:
-        st.error("Unable to fetch transcript. This video might not have any available transcripts.")
