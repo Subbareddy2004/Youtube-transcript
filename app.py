@@ -119,7 +119,7 @@ def sanitize_filename(filename):
     return re.sub(r'[\\/*?:"<>|]', "", filename)
 
 # Streamlit UI
-st.title("YouTube Video Content Generator")
+st.title("YouTube Insight Generator")
 youtube_link = st.text_input("Enter YouTube Video Link:")
 
 include_key_points = st.checkbox("Include Key Points")
